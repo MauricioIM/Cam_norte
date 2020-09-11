@@ -358,6 +358,48 @@ PARAMETER_SECTION
  matrix ssb_t(1,ntime_sim,1,npbr+1)
  number Frefh
  number Frefm
+   
+   
+ // new proyecciones
+ matrix Nhp(nyears,nyears+nyear_proy,1,nedades)
+ matrix Nmp(nyears,nyears+nyear_proy,1,nedades)
+ matrix Shp(nyears,nyears+nyear_proy,1,nedades)
+ matrix Smp(nyears,nyears+nyear_proy,1,nedades)
+ matrix Fhp(nyears,nyears+nyear_proy,1,nedades)
+ matrix Fmp(nyears,nyears+nyear_proy,1,nedades)
+ matrix Zhp(nyears,nyears+nyear_proy,1,nedades)
+ matrix Zmp(nyears,nyears+nyear_proy,1,nedades)
+ matrix cehp(nyears,nyears+nyear_proy,1,nedades)
+ matrix cemp(nyears,nyears+nyear_proy,1,nedades)
+   
+ vector Rhp(nyears,nyears+nyear_proy)
+ vector Rmp(nyears,nyears+nyear_proy)
+ vector Rtot(nyears,nyears+nyear_proy)
+ vector Fthp(nyears,nyears+nyear_proy)
+ vector Ftmp(nyears,nyears+nyear_proy)
+ vector Ftp(nyears,nyears+nyear_proy)
+ vector SBp(nyears,nyears+nyear_proy)
+ vector BTt(nyears,nyears+nyear_proy)
+ vector Yhp(nyears,nyears+nyear_proy)
+ vector Ymp(nyears,nyears+nyear_proy)
+   
+ vector whp(1,ntallas)
+ vector wmp(1,ntallas)
+ vector Sel_flohp(1,nedades)
+ vector Sel_flomp(1,nedades)
+   
+ sdreport_matrix Yproy(nyears,nyears+nyear_proy,1,nFt)
+ sdreport_matrix Yhproy(nyears,nyears+nyear_proy,1,nFt)
+ sdreport_matrix Ymproy(nyears,nyears+nyear_proy,1,nFt)
+ sdreport_matrix Fproy(nyears,nyears+nyear_proy,1,nFt)
+ sdreport_matrix Fhproy(nyears,nyears+nyear_proy,1,nFt)
+ sdreport_matrix Fmproy(nyears,nyears+nyear_proy,1,nFt)
+ sdreport_matrix SSBpj(nyears,nyears+nyear_proy,1,nFt)
+ sdreport_matrix BTpj(nyears,nyears+nyear_proy,1,nFt)
+ sdreport_matrix Rtotpj(nyears,nyears+nyear_proy,1,nFt)
+ sdreport_matrix Rhpj(nyears,nyears+nyear_proy,1,nFt)
+ sdreport_matrix Rmpj(nyears,nyears+nyear_proy,1,nFt)
+   
 
 PRELIMINARY_CALCS_SECTION
 
@@ -833,6 +875,116 @@ FUNCTION tac_proj
    }
  }
 
+
+ FUNCTION sim_Fcte
+   int j,t;
+ for (j=1; j<=nFt; j++){
+  Nhp(nyears) = Nh(nyears);
+  Nmp(nyears) = Nm(nyears);
+  Shp(nyears) = Sh(nyears);
+  Smp(nyears) = Sm(nyears);
+  Fhp(nyears) = Fh(nyears);
+  Fmp(nyears) = Fm(nyears);
+  Zhp(nyears) = Zh(nyears);
+  Zmp(nyears) = Zm(nyears);
+   
+  Rhp(nyears)  = Rfemale(nyears);
+  Rmp(nyears)  = Rmale(nyears);
+  Rtot(nyears) = Rec(nyears);
+  Fthp(nyears) = Ffemale(nyears);
+  Ftmp(nyears) = Fmale(nyears);
+  Ftp(nyears)  = Ftotal(nyears);
+   
+  whp  = Wmed(2);
+  wmp  = Wmed(1);
+  SBp(nyears) = BD(nyears);
+  BTt(nyears) = BT(nyears);
+  Sel_flohp   = Sel_floh(nyears);
+  Sel_flomp   = Sel_flom(nyears);
+   
+  for (t=nyears; t<=nyears+nyear_proy-1; t++)
+   {
+     if (recOp == 1){
+       Rhp(t+1)  = exp(log_Ro);
+       Rmp(t+1)  = exp(log_Ro)*exp(log_propmR)/(1-exp(log_propmR));
+       Rtot(t+1) = Rhp(t+1) + Rmp(t+1);
+     } else if (recOp == 2) {
+       Rhp(t+1) = mean(Rfemale(nyears-5,nyears));
+       Rmp(t+1) = mean(Rmale(nyears-5,nyears));
+       Rtot(t+1) = Rhp(t+1) + Rmp(t+1);
+     } else {
+       Rhp(t+1) = ajRh * Rfemale(nyears);
+       Rmp(t+1) = ajRm * Rmale(nyears);
+       Rtot(t+1) = Rhp(t+1) + Rmp(t+1);
+     }
+     
+     Nhp(t+1,1) = Rhp(t+1);
+     Nmp(t+1,1) = Rmp(t+1);
+     Nhp(t+1)(2,nedades) =++ elem_prod(Nhp(t)(1,nedades-1),Shp(t)(1,nedades-1));
+     Nhp(t+1,nedades) = Nhp(t+1,nedades) + Nhp(t,nedades)*Shp(t,nedades);
+     Nmp(t+1)(2,nedades) =++ elem_prod(Nmp(t)(1,nedades-1),Smp(t)(1,nedades-1));
+     Nmp(t+1,nedades) = Nmp(t+1,nedades) + Nmp(t,nedades)*Smp(t,nedades);
+     
+     if (t==nyears){
+       Fthp(t+1) = rCaph*Fthp(t);
+       Fhp(t+1)  = Fthp(t+1)*Sel_flohp;
+       Ftmp(t+1) = rCapm*Ftmp(t);
+       Fmp(t+1)  = Ftmp(t+1)*Sel_flomp;
+       Ftp(t+1)  = Fthp(t+1) + Ftmp(t+1);
+     } else {
+       Fthp(t+1) = mf(j)*Fmsy;
+       Fhp(t+1)  = Fthp(t+1)*Sel_flohp;
+       Ftmp(t+1) = mf(j)*Fmsy;
+       Fmp(t+1)  = Ftmp(t+1)*Sel_flomp;
+       Ftp(t+1)  = Fthp(t+1) + Ftmp(t+1);
+     }
+     
+     Zhp(t+1) = Fhp(t+1) + Mh;
+     Shp(t+1) = mfexp(-1.0 * Zhp(t+1));
+     
+     Zmp(t+1) = Fmp(t+1) + Mm;
+     Smp(t+1) = mfexp(-1.0 * Zmp(t+1));
+     
+     SBp(t+1) = sum(elem_prod(elem_prod(Nhp(t+1),exp(-dt(1)*Zhp(t+1)))*Prob_talla_h,elem_prod(msex,whp)));
+     BTt(t+1) = (Nhp(t+1)*Prob_talla_h)*whp + (Nmp(t+1)*Prob_talla_m)*wmp;
+     
+     cehp(t+1)  = elem_prod(elem_div(Fhp(t+1),Zhp(t+1)),elem_prod(1.0-Shp(t+1),Nhp(t+1)));
+     Yhp(t+1) 	 = sum(elem_prod(cehp(t+1)*Prob_talla_h,whp));
+     
+     cemp(t+1)  = elem_prod(elem_div(Fmp(t+1),Zmp(t+1)),elem_prod(1.0-Smp(t+1),Nmp(t+1)));
+     Ymp(t+1) 	 = sum(elem_prod(cemp(t+1)*Prob_talla_m,wmp));
+     
+     Yproy(nyears,j)  = pred_Desemb(nyears);
+     Yproy(t+1,j)     = Yhp(t+1) + Ymp(t+1);
+     Yhproy(nyears,j) = Yh(nyears);
+     Yhproy(t+1,j)    = Yhp(t+1);
+     Ymproy(nyears,j) = Ym(nyears);
+     Ymproy(t+1,j)    = Ymp(t+1);
+     
+     Fproy(nyears,j)  = Ftp(nyears);
+     Fproy(t+1,j)	   = Ftp(t+1);
+     Fhproy(nyears,j) = Ffemale(nyears);
+     Fhproy(t+1,j)    = Fthp(t+1);
+     Fmproy(nyears,j) = Fmale(nyears);
+     Fmproy(t+1,j)    = Ftmp(t+1);
+     
+     Rtotpj(nyears,j) = Rec(nyears);
+     Rtotpj(t+1,j)	   = Rtot(t+1);
+     Rhpj(nyears,j)   = Rfemale(nyears);
+     Rhpj(t+1,j)      = Rhp(t+1);
+     Rmpj(nyears,j)   = Rmale(nyears);
+     Rmpj(t+1,j)      = Rmp(t+1);
+     
+     SSBpj(nyears,j)  = SBp(nyears);
+     SSBpj(t+1,j)     = SBp(t+1);
+     
+     BTpj(nyears,j)   = BTt(nyears);
+     BTpj(t+1,j)      = BTt(t+1);
+   }
+ }
+ 
+ 
+  
 FUNCTION Eval_CTP
 
  // se considera el Fpbr de hembras como el representativo factor limitante
