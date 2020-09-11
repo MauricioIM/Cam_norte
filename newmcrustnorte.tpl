@@ -75,7 +75,7 @@ DATA_SECTION
 
  number log_L50fpriorh
  number log_s1priorh
- number log_s2priorh
+ number log_s2priorh//
 
  !! log_L50fpriorh = log(parS(2,1));
  !! log_s1priorh = log(parS(2,2));
